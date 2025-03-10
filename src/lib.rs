@@ -136,4 +136,30 @@ impl VideoDataLoader {
             transforms,
             runtime,
         };
+        loader.start_workers()?;
+        Ok(loader)
+    }
+
+    fn load_metadata(
+        path=&str,
+        index: usize
+    )->Result<MetaData, DataLoaderError> {
+        let cap=videoio::VideoCapture::from_file(path,videoio::CAP_ANY)
+            .map_err(|e| DataLoaderError::VideoOpenError(format!("{}:{}", path,e)))?;
+        let frame_count=cap.get(videoio::CAP_PROP_FRAME_COUNT)? as i64;
+        let fps=cap.get(videoio::CAP_PROP_FPS)?;
+        let width=cap.get(videoio::CAP_PROP_FRAME_WIDTH)? as i32;
+        let height=cap.get(videoio::CAP_PROP_FRAME_HEIGHT)? as i32;
+
+        Ok(MetaData {
+            path: PathBuf::from(path),
+            frame_count,
+            fps,
+            width,
+            height,
+            index,
+        })
+    }
 }
+
+
