@@ -91,3 +91,49 @@ impl Default for DataLoaderConfig {
         }
     }
 }
+
+type FrameTransform = Arc<dyn Fn(&Mat)->Result<Mat,DataLoaderError>+Send+Sync>;
+
+struct VideoDataLoader {
+    videos: Vec<Metadata>,
+    config: DataLoaderConfig,
+    current_indices: Vec<(usize,i64)>,
+    prefetch_queue: Arc<Mutex<VecDeque<Vec<VideoFrame>>>>,
+    worker_handles: Vec<thread::JoinHandle<()>>,
+    stop_signal: Arc<Mutex<bool>>,
+    transforms: Vec<FrameTransform>,
+    runtime: Runtime,
+}
+
+impl VideoDataLoader {
+    fn new(
+        video_paths: Vec<String>,
+        config: DataLoaderConfig,
+        transforms: Vec<FrameTransform>
+    )->Result<Self,DataLoaderError> {
+        let runtime=Runtime::new()
+            .map_err(|e| DataLoaderError::IoError(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("Failed to create tokio runtime: {}",e)
+            )))?;
+
+        let videos=video_paths.par_iter().enumerate().map(|(idx,path)| {
+            Self::load_video_metadata(path,idx)
+        }).collect::<Result<Vec<_>, _>>()?;
+
+        let current_indices=videos.iter().map(|v| (v.index,0i64)).collect();
+
+        let prefetch_queue=Arc::new(Mutex::new(VecDeque::new()));
+        let stop_signal=Arc::new(Mutex::new(false));
+        
+        let mut loader=Self {
+            videos,
+            config,
+            current_indices,
+            prefetch_queue,
+            worker_handles: Vec::new(),
+            stop_signal,
+            transforms,
+            runtime,
+        };
+}
