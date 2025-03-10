@@ -160,6 +160,50 @@ impl VideoDataLoader {
             index,
         })
     }
+
+    fn start_workers(&mut self) -> Result<(),DataLoaderError> {
+        let num_workers=self.config.num_workers;
+        let prefetch_count=self.config.prefetch_factor*self.config.batch_size;
+        let (sender,receiver)=bounded(prefetch_count);
+
+        for worker_id in 0..num_workers {
+            let videos=self.videos.clone();
+            let config=self.config.clone();
+            let sender=sender.clone();
+            let stop_signal=Arc::clone(&self.stop_signal);
+            let transforms=self.transforms.clone();
+
+            let handle=thread::Builder::new()
+                .name(format!("video_loader_{}",worker_id))
+                .spawn(move || {
+                    Self::worker_loop(
+                        worker_id,
+                        videos,
+                        config,
+                        sender,
+                        stop_signal,
+                        transforms
+                    );
+                })
+                .map_err(|e| DataLoaderError::ThreadError(format!("Failed to spawn thread: {}", e)))?;
+            self.worker_handles.push(handle);
+        }
+
+        let prefetch_queue=Arc::clone(&self.prefetch_queue);
+        let stop_signal=Arc::clone(&self.stop_signal);
+        let config=self.config.clone();
+
+        let collector_handle=thread::Builder::new()
+            .name("collector".to_string())
+            .spawn(move || {
+                Self::collector_loop(receiver, prefetch_queue, stop_signal, config.batch_size);
+            })
+            .map_err(|e| DataLoaderError::ThreadError(format!("Failed to spawn collector thread: {}",e)))?;
+
+        self.worker_handles.push(collector_handles);
+
+        Ok(())
+    }
 }
 
 
