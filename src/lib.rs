@@ -35,3 +35,40 @@ pub enum DataLoaderError {
     #[error("Thread error: {0}")
     TreadError(String),
 }
+
+#[derive(Clone)]
+struct VideoFrame {
+    data: Arc<Vec<u8>>,
+    width: i32,
+    height: i32,
+    channels: i32,
+    video_idx: usize,
+    frame_idx: i64,
+    is_padding: bool, // flag to indicate if we had to padd the end of the video
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct MetaData {
+    path: PathBuf,
+    frame_count: i64,
+    fps: f64,
+    width: i32,
+    height: i32,
+    index: usize,
+}
+
+#[derive(Clone,Serialize,Deserialize)]
+pub struct DataLoaderConfig {
+    batch_size: usize,
+    num_workers: usize,
+    prefetch_factor: usize,
+    frame_stride: i64,
+    clip_length: i64,
+    resize_height: i32,
+    resize_width: i32,
+    mean= Vec<f32>,
+    std= Vec<f32>,
+    device: String,
+    clip_overlap: f32,
+    pad_last=bool,
+}
