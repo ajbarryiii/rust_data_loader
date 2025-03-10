@@ -72,3 +72,22 @@ pub struct DataLoaderConfig {
     clip_overlap: f32,
     pad_last=bool,
 }
+
+impl Default for DataLoaderConfig {
+    fn default() -> Self {
+        Self {
+            batch_size: 32,
+            num_workers: 4,
+            prefetch_factor: 2,
+            frame_stride: 1,
+            clip_length: 16,
+            resize_height: 224,
+            resize_width: 224,
+            mean: vec![0.485, 0.456, 0.406],
+            std: vec![0.229, 0.224, 0.225],
+            device: "cuda:0".to_string(),
+            clip_overlap: 0.0,
+            pad_last: true,
+        }
+    }
+}
