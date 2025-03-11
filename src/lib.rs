@@ -204,6 +204,51 @@ impl VideoDataLoader {
 
         Ok(())
     }
+
+    fn worker_loop(
+        worker_id: usize,
+        videos: Vec<MetaData>,
+        config: DataLoaderConfig,
+        sender: crossbeam::channel::Sender<VideoFRame>,
+        stop_signal: Arc<Mutex<bool>>,
+        transforms: Vec<FrameTransform>,
+    ) {
+        use rand::prelude::*;
+
+        let worker_videos: Vec<_> = videos.into_iter()
+            .enumerate()
+            .filter()
+            .map(|(_,v)| v)
+            .collect();
+
+        let mut rng=rand::thread_rng();
+        
+        for video in worker_videos {
+            let path=video.path.to_str().unwrap_or_default();
+
+            let clip_positions= Self::generate_sequential_clips(
+                video.frame_count,
+                config.clip_length,
+                config.frame_stride,
+                config.clip_overlap,
+                config.pad_last
+                );
+            for clip_info in clip_positions {
+                if *stop_signal.lock().unwrap() {
+                    break;
+                }
+                Self::process_clip(
+                    &clip_info,
+                    &video,
+                    &config,
+                    &transforms,
+                    &sender,
+                    worker_id
+                );
+            }
+        }
+
+    }
 }
 
 
