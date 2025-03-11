@@ -247,7 +247,38 @@ impl VideoDataLoader {
                 );
             }
         }
+    }
 
+    fn generate_sequential_clips(
+        frame_count: i64,
+        clip_length: i64,
+        frame_stride: i64,
+        overlap: f32,
+        pad_last: bool
+    ) -> Vec<ClipInfo> {
+        let mut clips=Vec::new();
+        let stride=(clip_length as f32 * (1.0-overlap)) as i64;
+        let stride=std::cmp::max(1,stride);
+
+        let mut start_frame=0;
+        while start_frame<frame_count {
+            let remaining=frame_count-start_frame;;
+            let actual_length=if remaining<clip_length&&pad_last {
+                clip_length
+            } else if remaining < clip_length {
+                remaining
+            } else {
+                clip_length
+            };
+
+            clips.push(ClipInfo {
+                start_frame,
+                clip_length: actual_length,
+                stride: frame_stride,
+                needs_padding: remaining<clip_length && pad_last,
+            });
+            start_frame+=stride;
+        }
     }
 }
 
