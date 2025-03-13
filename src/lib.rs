@@ -279,6 +279,69 @@ impl VideoDataLoader {
             });
             start_frame+=stride;
         }
+        clips
+    }
+
+    #[derive(Clone,Debug)]
+    struct ClipInfo {
+        start_frame: i64,
+        clip_length: i64,
+        stride: i64,
+        needs_padding: bool,
+    }
+
+    fn process_clip(
+        clip_info: &ClipInfo,
+        video: &Metadata,
+        config: &DataLoaderConfig,
+        transforms: &[FrameTransform],
+        sender: &crossbeam::channel::Sender<VideoFrame>,
+        worker_id: usize,
+    ) {
+        let path=video.path.to_str().unwrap_or_default();
+        let mut cap=match videoio::VideoCapture::from_file(path,videoio::CAP_ANY) {
+            if clip_info.start_frame>0 {
+                if let Err(e) = cap.set(videoio::CAP_PROP_POS_FRAMES, clip_info.start_frame as f64) {
+                    eprintln!("Worker {}: Failed to seek to frame {}: {}"'
+                        worker_id,clip_info.start_frame,e);
+                    return;
+                }
+            }
+
+            let mut frames_read=0;
+            let mut last_valid_frame: Option<Mat> = None;
+
+            while frames_read<clip_info.clip_length {
+                let mut frame=Mat::default();
+                let read_sucess = match cap.read(&mut frame) {
+                    Ok(success) => success,
+                    Err(e)=> {
+                        eprintln!("Worker {}: Error reading frame: {}", worker_id, e);
+                        break;
+                    }
+                };
+
+                if !read_success {
+                    if clip_info.needs_padding && last_valid_frame.is_some() {
+                        let mut buffer = Vec::new();
+                        let mut last_frame=last_valid_frame.as_ref().unwrap();
+
+                        let processed_frame=match Self::apply_transforms(last_frame,transforms) {
+                            Ok(f) =>f,
+                            Err(e)=> {
+                                eprinln!("Worker {}: Error processing padding frame: {}", worker_id,e);
+                                break;
+                            }
+                        };
+                        
+                        let step=processed_frame.step1(0).unwrap_or(0) as usize;
+                        let 
+
+                    }
+                }
+            }
+
+        }
     }
 }
 
