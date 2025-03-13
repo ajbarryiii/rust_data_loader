@@ -32,7 +32,7 @@ pub enum DataLoaderError {
     #[error("OpenCV error: {0}")]
     OpenCvError(#[from] opencv::Error),
 
-    #[error("Thread error: {0}")
+    #[error("Thread error: {0}")]
     TreadError(String),
 }
 
@@ -66,11 +66,11 @@ pub struct DataLoaderConfig {
     clip_length: i64,
     resize_height: i32,
     resize_width: i32,
-    mean= Vec<f32>,
-    std= Vec<f32>,
+    mean: Vec<f32>,
+    std: Vec<f32>,
     device: String,
     clip_overlap: f32,
-    pad_last=bool,
+    pad_last: bool,
 }
 
 impl Default for DataLoaderConfig {
@@ -141,7 +141,7 @@ impl VideoDataLoader {
     }
 
     fn load_metadata(
-        path=&str,
+        path:&str,
         index: usize
     )->Result<MetaData, DataLoaderError> {
         let cap=videoio::VideoCapture::from_file(path,videoio::CAP_ANY)
@@ -335,8 +335,14 @@ impl VideoDataLoader {
                         };
                         
                         let step=processed_frame.step1(0).unwrap_or(0) as usize;
-                        let 
-
+                        let data_slice= unsafe {
+                            std::slice::from_raw_parts(
+                                processed_frame.data() as *const u8,
+                                step * processed_frame.rows() as usize
+                            )
+                        };
+                        
+                        buffer.extend_from_slice(data_slice);
                     }
                 }
             }
