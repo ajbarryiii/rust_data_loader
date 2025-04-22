@@ -13,7 +13,7 @@ pyo3 = { version = "0.19", features = ["extension-module"] }
 tokio = { version = "1", features = ["full"] }
 crossbeam = "0.8"
 rayon = "1.7"
-opencv = { version = "0.83", features = ["opencv-4"] }
+opencv = { version = "0.94.2" }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 rand = "0.8"
